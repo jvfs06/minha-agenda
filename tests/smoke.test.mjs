@@ -24,3 +24,5 @@ test('Mosaic questions load before quiz and cache offline',()=>{const html=read(
 test('National bank JSON import preserves existing records and uses stable question ids',()=>{const source=read('v3.js');assert.ok(source.includes("key:'cnhNationalBankV1'"));assert.ok(source.includes("questionBank=[...national,...baseQuestionBank]"));assert.ok(source.includes('validateNationalBank'));assert.ok(source.includes('matchedPlate?.image'));assert.ok(!source.includes("clear('records')"))});
 
 test('Extras remains hidden until its navigation tab is active',()=>{const css=read('v3.css');assert.ok(css.includes('#extras.page{display:none}'));assert.ok(css.includes('#extras.page.active{display:grid'))});
+
+test('Mobile bottom nav overrides inherited top:0 to avoid full-screen overlay',()=>{const base=read('style.css');const mobile=read('v4.css');assert.match(base,/nav\{[^}]*top:0/);assert.match(mobile,/nav\.bottom-nav\{top:auto;bottom:0;height:auto/);});
