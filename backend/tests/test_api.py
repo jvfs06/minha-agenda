@@ -92,5 +92,20 @@ class APITest(unittest.TestCase):
         self.assertEqual(self.client.put(url,json={"base_revision":1,"data":{"key":"goals","value":{"workouts":4}}},headers=self.headers).json["revision"],2)
         self.assertEqual(self.client.get("/api/sync/settings").json["items"][0]["data"]["value"]["workouts"],4)
 
+    def test_bearer_token_without_cookies(self):
+        creator=self.api.app.test_client()
+        r=creator.post("/api/auth/register",json={"email":"bearer@example.com","password":"long-test-password"},headers=self.headers)
+        self.assertEqual(r.status_code,201)
+        token=r.json["access_token"]
+        self.assertTrue(token)
+        other=self.api.app.test_client()
+        self.assertEqual(other.get("/api/auth/me").status_code,401)
+        bearer={"Authorization":"Bearer "+token}
+        self.assertEqual(other.get("/api/auth/me",headers=bearer).status_code,200)
+        h={**self.headers,**bearer}
+        self.assertEqual(other.put("/api/sync/records/bearer-1",json={"base_revision":0,"data":{"id":"bearer-1"}},headers=h).status_code,200)
+        self.assertEqual(other.post("/api/auth/logout",json={},headers=h).status_code,200)
+        self.assertEqual(other.get("/api/auth/me",headers=bearer).status_code,401)
+
 if __name__ == "__main__":
     unittest.main()
