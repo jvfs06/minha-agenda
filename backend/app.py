@@ -1,7 +1,5 @@
 """Minha Agenda API: authentication and opt-in revisioned sync foundation."""
 import hashlib
-from collections import defaultdict
-from threading import Lock
 import hmac
 import json
 import os
@@ -34,8 +32,6 @@ SESSION_SECONDS = 60 * 60 * 24 * 14
 MAX_ITEMS = 500
 RATE_WINDOW = 15 * 60
 RATE_LIMIT = 12
-_attempts = defaultdict(list)
-_attempt_lock = Lock()
 MAX_PAYLOAD = 64 * 1024
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 1024 * 1024
@@ -99,7 +95,7 @@ def init_db():
           token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
           expires_at INTEGER NOT NULL
         );
-        CREATE TABLE IF NOT EXISTS items(
+        CREATE TABLE IF NOT EXISTS auth_attempts(\n          ip TEXT NOT NULL, attempted_at INTEGER NOT NULL\n        );\n        CREATE INDEX IF NOT EXISTS idx_auth_attempts_ip_time ON auth_attempts(ip,attempted_at);\n        CREATE TABLE IF NOT EXISTS items(
           user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
           collection TEXT NOT NULL CHECK(collection IN ('records','settings')),
           item_id TEXT NOT NULL, payload TEXT NOT NULL,
@@ -170,16 +166,20 @@ def health():
     return jsonify(status="ok")
 
 def throttle_auth():
-    # Single-process fallback. Production needs a shared limiter (e.g. Redis).
+    # Database-backed limiter, shared by all Gunicorn workers and instances.
     ip = request.remote_addr or "unknown"
-    now = time.monotonic()
-    with _attempt_lock:
-        attempts = [t for t in _attempts[ip] if now - t < RATE_WINDOW]
-        if len(attempts) >= RATE_LIMIT:
-            _attempts[ip] = attempts
+    now = int(time.time())
+    with connect() as db:
+        if not DATABASE_URL:
+            db.execute("BEGIN IMMEDIATE")
+        else:
+            # Serialize attempts across workers for the same IP.
+            db.execute("SELECT pg_advisory_xact_lock(hashtext(?))", (ip,))
+        db.execute("DELETE FROM auth_attempts WHERE attempted_at<?", (now - RATE_WINDOW,))
+        count = db.execute("SELECT COUNT(*) AS n FROM auth_attempts WHERE ip=? AND attempted_at>=?", (ip, now - RATE_WINDOW)).fetchone()["n"]
+        if count >= RATE_LIMIT:
             return True
-        attempts.append(now)
-        _attempts[ip] = attempts
+        db.execute("INSERT INTO auth_attempts(ip,attempted_at) VALUES(?,?)", (ip, now))
     return False
 
 def credentials():
