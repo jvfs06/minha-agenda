@@ -4,6 +4,8 @@ import hmac
 import json
 import os
 import re
+import smtplib
+from email.message import EmailMessage
 import secrets
 import sqlite3
 import time
@@ -95,7 +97,7 @@ def init_db():
           token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
           expires_at INTEGER NOT NULL
         );
-        CREATE TABLE IF NOT EXISTS auth_attempts(\n          ip TEXT NOT NULL, attempted_at INTEGER NOT NULL\n        );\n        CREATE INDEX IF NOT EXISTS idx_auth_attempts_ip_time ON auth_attempts(ip,attempted_at);\n        CREATE TABLE IF NOT EXISTS items(
+        CREATE TABLE IF NOT EXISTS password_resets(\n          token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, expires_at INTEGER NOT NULL\n        );\n        CREATE TABLE IF NOT EXISTS auth_attempts(\n          ip TEXT NOT NULL, attempted_at INTEGER NOT NULL\n        );\n        CREATE INDEX IF NOT EXISTS idx_auth_attempts_ip_time ON auth_attempts(ip,attempted_at);\n        CREATE TABLE IF NOT EXISTS items(
           user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
           collection TEXT NOT NULL CHECK(collection IN ('records','settings')),
           item_id TEXT NOT NULL, payload TEXT NOT NULL,
@@ -227,6 +229,65 @@ def login():
         return error("Credenciais inválidas", 401)
     token = issue_session(user["id"])
     return set_session_cookie(make_response(jsonify(id=user["id"], email=email, access_token=token)), token)
+
+def send_reset_email(recipient, token):
+    host = os.getenv("AGENDA_SMTP_HOST")
+    sender = os.getenv("AGENDA_SMTP_FROM")
+    public_url = os.getenv("AGENDA_FRONTEND_URL", "")
+    if not host or not sender or not public_url.startswith("https://"):
+        raise RuntimeError("SMTP and HTTPS frontend URL must be configured for password recovery")
+    msg = EmailMessage()
+    msg["From"], msg["To"], msg["Subject"] = sender, recipient, "Minha Agenda — recuperação de senha"
+    msg.set_content("Código de recuperação (válido por 15 minutos): " + token +
+                    "\\nAbra Minha Agenda e informe este código na área da conta.")
+    port = int(os.getenv("AGENDA_SMTP_PORT", "587"))
+    with smtplib.SMTP(host, port, timeout=15) as smtp:
+        smtp.starttls()
+        username = os.getenv("AGENDA_SMTP_USER")
+        if username:
+            smtp.login(username, os.environ["AGENDA_SMTP_PASSWORD"])
+        smtp.send_message(msg)
+
+@app.post("/api/auth/forgot-password")
+def forgot_password():
+    if throttle_auth():
+        return error("Muitas tentativas. Tente novamente mais tarde.", 429)
+    data = request.get_json(silent=True) or {}
+    email = data.get("email", "")
+    if not isinstance(email, str) or len(email) > 254:
+        return error("E-mail inválido", 400)
+    email = email.strip().lower()
+    with connect() as db:
+        user = db.execute("SELECT id FROM users WHERE email=?", (email,)).fetchone()
+    if user:
+        token = secrets.token_urlsafe(32)
+        with connect() as db:
+            db.execute("INSERT INTO password_resets VALUES(?,?,?)",
+                       (session_hash(token), user["id"], int(time.time()) + 900))
+        try:
+            send_reset_email(email, token)
+        except Exception:
+            app.logger.exception("Password reset delivery failed")
+            # Never leak tokens, recipient addresses, or account existence.
+    return jsonify(message="Se a conta existir, enviaremos as instruções de recuperação.")
+
+@app.post("/api/auth/reset-password")
+def reset_password():
+    if throttle_auth():
+        return error("Muitas tentativas. Tente novamente mais tarde.", 429)
+    data = request.get_json(silent=True) or {}
+    token, password = data.get("token"), data.get("password")
+    if not isinstance(token, str) or not 20 <= len(token) <= 256 or not isinstance(password, str) or not 12 <= len(password) <= 128:
+        return error("Dados inválidos", 400)
+    with connect() as db:
+        reset = db.execute("SELECT user_id FROM password_resets WHERE token_hash=? AND expires_at>?",
+                           (session_hash(token), int(time.time()))).fetchone()
+        if not reset:
+            return error("Código inválido ou expirado", 400)
+        db.execute("UPDATE users SET password_hash=? WHERE id=?", (hash_password(password), reset["user_id"]))
+        db.execute("DELETE FROM sessions WHERE user_id=?", (reset["user_id"],))
+        db.execute("DELETE FROM password_resets WHERE user_id=?", (reset["user_id"],))
+    return jsonify(ok=True)
 
 @app.get("/api/auth/me")
 @require_user
