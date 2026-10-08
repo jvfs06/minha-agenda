@@ -97,7 +97,14 @@ def init_db():
           token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
           expires_at INTEGER NOT NULL
         );
-        CREATE TABLE IF NOT EXISTS password_resets(\n          token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, expires_at INTEGER NOT NULL\n        );\n        CREATE TABLE IF NOT EXISTS auth_attempts(\n          ip TEXT NOT NULL, attempted_at INTEGER NOT NULL\n        );\n        CREATE INDEX IF NOT EXISTS idx_auth_attempts_ip_time ON auth_attempts(ip,attempted_at);\n        CREATE TABLE IF NOT EXISTS items(
+        CREATE TABLE IF NOT EXISTS password_resets(
+          token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, expires_at INTEGER NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS auth_attempts(
+          ip TEXT NOT NULL, attempted_at INTEGER NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_auth_attempts_ip_time ON auth_attempts(ip,attempted_at);
+        CREATE TABLE IF NOT EXISTS items(
           user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
           collection TEXT NOT NULL CHECK(collection IN ('records','settings')),
           item_id TEXT NOT NULL, payload TEXT NOT NULL,
@@ -166,6 +173,18 @@ def protect_mutations():
 @app.get("/api/health")
 def health():
     return jsonify(status="ok")
+
+@app.get("/api/health/db")
+def health_db():
+    """Read-only connectivity check. Never reveal DB credentials or exceptions."""
+    try:
+        with connect() as db:
+            row = db.execute("SELECT 1 AS alive").fetchone()
+        if row and row["alive"] == 1:
+            return jsonify(status="ok", database="connected")
+    except Exception:
+        app.logger.exception("Database health check failed")
+    return jsonify(status="error", database="unavailable"), 503
 
 def throttle_auth():
     # Database-backed limiter, shared by all Gunicorn workers and instances.
@@ -239,7 +258,7 @@ def send_reset_email(recipient, token):
     msg = EmailMessage()
     msg["From"], msg["To"], msg["Subject"] = sender, recipient, "Minha Agenda — recuperação de senha"
     msg.set_content("Código de recuperação (válido por 15 minutos): " + token +
-                    "\\nAbra Minha Agenda e informe este código na área da conta.")
+                    "\nAbra Minha Agenda e informe este código na área da conta.")
     port = int(os.getenv("AGENDA_SMTP_PORT", "587"))
     with smtplib.SMTP(host, port, timeout=15) as smtp:
         smtp.starttls()
