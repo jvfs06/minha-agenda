@@ -3,7 +3,7 @@ databases:
   - name: minha-agenda-db
     databaseName: minha_agenda
     user: agenda_app
-    plan: basic
+    plan: basic-256mb
 services:
   - type: web
     name: minha-agenda-api
