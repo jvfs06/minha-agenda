@@ -174,6 +174,18 @@ def protect_mutations():
 def health():
     return jsonify(status="ok")
 
+@app.get("/api/health/db")
+def health_db():
+    """Read-only connectivity check. Never reveal DB credentials or exceptions."""
+    try:
+        with connect() as db:
+            row = db.execute("SELECT 1 AS alive").fetchone()
+        if row and row["alive"] == 1:
+            return jsonify(status="ok", database="connected")
+    except Exception:
+        app.logger.exception("Database health check failed")
+    return jsonify(status="error", database="unavailable"), 503
+
 def throttle_auth():
     # Database-backed limiter, shared by all Gunicorn workers and instances.
     ip = request.remote_addr or "unknown"
