@@ -5,7 +5,7 @@
 **Nenhum serviço é criado automaticamente por este repositório.** Existem dois Blueprints:
 
 - `render.preview.yaml`: API e PostgreSQL Free, **somente dados fictícios**. O banco gratuito expira após 30 dias e não deve ser usado como armazenamento permanente. A API Free pode hibernar e não permite SMTP de saída nas portas 25, 465 ou 587.
-- `render.yaml`: configuração **paga** com web Starter e PostgreSQL Basic. Antes de importar, verificar o nome exato e preço do plano do banco no painel Render (a nomenclatura de planos mudou em 2026). A combinação de web Starter e Postgres Basic-256mb custa cerca de US$ 13/mês antes de extras, **mas o `plan: basic` existente não garante que seja o Basic-256mb**. Não aprovar este Blueprint sem conferir a prévia de custos.
+- `render.yaml`: configuração **paga** com web Starter e PostgreSQL Basic. Antes de importar, verificar o nome exato e preço do plano do banco no painel Render (a nomenclatura de planos mudou em 2026). A combinação de web Starter e Postgres Basic-256mb custa cerca de US$ 13/mês antes de extras, e o Blueprint agora fixa explicitamente `plan: basic-256mb` (nome legado aceito pelo Render). Não aprovar este Blueprint sem conferir a prévia de custos.
 
 ### Checklist antes de criar qualquer recurso
 
