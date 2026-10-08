@@ -142,7 +142,8 @@ def set_session_cookie(response, token):
 def require_user(fn):
     @wraps(fn)
     def inner(*args, **kwargs):
-        token = request.cookies.get(COOKIE_NAME, "")
+        authorization = request.headers.get("Authorization", "")
+        token = authorization[7:] if authorization.startswith("Bearer ") else request.cookies.get(COOKIE_NAME, "")
         if not token:
             return error("Não autenticado", 401)
         with connect() as db:
@@ -210,7 +211,7 @@ def register():
             return error("Não foi possível cadastrar esta conta", 409)
         raise
     token = issue_session(user_id)
-    return set_session_cookie(make_response(jsonify(id=user_id, email=email), 201), token)
+    return jsonify(id=user_id, email=email, access_token=token), 201
 
 @app.post("/api/auth/login")
 def login():
@@ -224,7 +225,7 @@ def login():
         user = db.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
     if not verify_password(password, user["password_hash"] if user is not None else hash_password("placeholder-dummy-password", bytes(16))):
         return error("Credenciais inválidas", 401)
-    return set_session_cookie(make_response(jsonify(id=user["id"], email=email)), issue_session(user["id"]))
+    return jsonify(id=user["id"], email=email, access_token=issue_session(user["id"]))
 
 @app.get("/api/auth/me")
 @require_user
@@ -234,7 +235,8 @@ def me():
 @app.post("/api/auth/logout")
 @require_user
 def logout():
-    token = request.cookies.get(COOKIE_NAME, "")
+    authorization = request.headers.get("Authorization", "")
+    token = authorization[7:] if authorization.startswith("Bearer ") else request.cookies.get(COOKIE_NAME, "")
     with connect() as db:
         db.execute("DELETE FROM sessions WHERE token_hash=?", (session_hash(token),))
     response = make_response(jsonify(ok=True))
