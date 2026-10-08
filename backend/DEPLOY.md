@@ -65,3 +65,11 @@ O `render.yaml` descreve um serviço web Flask/Gunicorn e um PostgreSQL gerencia
 A interface experimental usa `Authorization: Bearer` e `credentials: "omit"`. O token aleatório é guardado **somente em memória JavaScript**; ao recarregar a página é necessário entrar novamente. Não use `localStorage` nem IndexedDB para armazenar o token sem revisão de segurança. O backend mantém cookies HttpOnly como compatibilidade, mas a interface não depende deles. Como a API aceita `Authorization`, o preflight CORS precisa permitir esse cabeçalho e origens restritas. Os tokens devem ser protegidos contra XSS; o frontend não pode injetar HTML não confiável. Para produção, adotar sessões de curta duração, rotação/renovação e revogação adequada.
 
 **Ainda não liberar produção:** rate limiter já usa banco compartilhado; recuperação de senha exige SMTP e ainda falta verificação de e-mail. Esses itens precisam de infraestrutura externa e validação antes de criar contas reais.
+
+## Teste de conectividade sem escrita
+
+Após implantar o commit que contém esta rota, abra `https://minha-agenda-api-teste.onrender.com/api/health/db`.
+- `200` e `{"status":"ok","database":"connected"}`: a API consegue consultar o banco configurado.
+- `503` e `{"status":"error","database":"unavailable"}`: verificar os logs privados do Render, a variável `DATABASE_URL`, a região e o status do PostgreSQL.
+
+A consulta usa apenas `SELECT 1`, sem criar usuários ou registros. **Ela verifica o banco configurado, mas não prova isoladamente que ele é PostgreSQL**: confirme no Render que `DATABASE_URL` aponta para a instância PostgreSQL correta. A nova rota só estará disponível depois de implantar o commit atualizado; um `404` antes disso é esperado.
