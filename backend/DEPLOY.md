@@ -1,5 +1,26 @@
 # Preparação para hospedagem (não publicada automaticamente)
 
+## Custos e aprovação (revisão de outubro de 2026)
+
+**Nenhum serviço é criado automaticamente por este repositório.** Existem dois Blueprints:
+
+- `render.preview.yaml`: API e PostgreSQL Free, **somente dados fictícios**. O banco gratuito expira após 30 dias e não deve ser usado como armazenamento permanente. A API Free pode hibernar e não permite SMTP de saída nas portas 25, 465 ou 587.
+- `render.yaml`: configuração **paga** com web Starter e PostgreSQL Basic. Antes de importar, verificar o nome exato e preço do plano do banco no painel Render (a nomenclatura de planos mudou em 2026). A combinação de web Starter e Postgres Basic-256mb custa cerca de US$ 13/mês antes de extras, **mas o `plan: basic` existente não garante que seja o Basic-256mb**. Não aprovar este Blueprint sem conferir a prévia de custos.
+
+### Checklist antes de criar qualquer recurso
+
+1. Escolher explicitamente **preview gratuito** ou **produção paga**; nunca usar dados reais no preview.
+2. Abrir o Render Dashboard e conferir o plano Hobby (workspace) e o custo **por serviço e banco**, armazenamento, tráfego e minutos de build.
+3. Conferir que a região do banco e da API é a mesma e que a variável `DATABASE_URL` usa a conexão interna.
+4. Revisar os nomes dos recursos para evitar duplicar instâncias existentes e custos inesperados.
+5. Conferir o caminho do Blueprint selecionado. O padrão `render.yaml` é **pago**.
+6. Antes de habilitar produção: configurar SMTP por provedor compatível, verificar domínio/origens, habilitar backup e executar teste de restauração.
+7. Após implantação **somente com autorização**, verificar `/api/health`, cadastrar conta fictícia e validar login, logout, recuperação, escrita e conflito de revisão.
+8. **Não habilitar o script `auth-sync.js` no GitHub Pages**, nem importar registros do IndexedDB, até o teste completo e backup comprovado.
+
+Documentação oficial: https://render.com/pricing e https://render.com/docs/free.
+
+
 O `render.yaml` descreve um serviço web Flask/Gunicorn e um PostgreSQL gerenciado no Render. **Os planos definidos podem gerar cobrança**: confira preços e limites atuais no painel do provedor antes de criar os recursos.
 
 ## Passos de configuração
