@@ -1,0 +1,26 @@
+# Preview-only Render Blueprint. DO NOT use for personal data.
+# Render Free PostgreSQL expires after 30 days and can be deleted.
+# This file is intentionally separate from the paid production render.yaml.
+databases:
+  - name: minha-agenda-preview-db
+    databaseName: agenda_preview
+    user: agenda_preview
+    plan: free
+services:
+  - type: web
+    name: minha-agenda-preview-api
+    runtime: python
+    rootDir: backend
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --bind 0.0.0.0:$PORT --workers 1 app:app
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: minha-agenda-preview-db
+          property: connectionString
+      - key: AGENDA_ALLOWED_ORIGINS
+        value: https://jvfs06.github.io
+      - key: AGENDA_SECURE_COOKIES
+        value: "1"
