@@ -121,5 +121,23 @@ class APITest(unittest.TestCase):
         self.assertEqual(self.client.post("/api/auth/reset-password",json={"token":token_holder[0],"password":"replacement-long-password"},headers=self.headers).status_code,400)
         self.assertEqual(self.client.post("/api/auth/login",json={"email":body["email"],"password":"replacement-long-password"},headers=self.headers).status_code,200)
 
+    def test_database_health_read_only(self):
+        response=self.client.get("/api/health/db")
+        self.assertEqual(response.status_code,200)
+        self.assertEqual(response.json,{"status":"ok","database":"connected"})
+
+    def test_database_health_failure_hides_details(self):
+        from unittest.mock import patch
+        from contextlib import contextmanager
+        @contextmanager
+        def broken_connection():
+            raise RuntimeError("sensitive-db-credentials")
+            yield
+        with patch.object(self.api,"connect",broken_connection):
+            response=self.client.get("/api/health/db")
+        self.assertEqual(response.status_code,503)
+        self.assertEqual(response.json,{"status":"error","database":"unavailable"})
+        self.assertNotIn("sensitive-db-credentials",response.get_data(as_text=True))
+
 if __name__ == "__main__":
     unittest.main()
