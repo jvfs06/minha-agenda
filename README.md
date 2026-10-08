@@ -79,3 +79,9 @@ Fonte temática: https://www.gov.br/transportes/pt-br/assuntos/transito/senatran
 - Fonte fornecida pelo usuário: *Mosaico de Placas de Sinalização.pdf*, páginas 1 (regulamentação), 2–3 (advertência) e 4 (indicação). Cada questão traz `sourceCode`, `sourcePage`, `sourceTitle` e `imageAlt`.
 - Os desenhos são esquemáticos, **não** reproduções exatas das placas oficiais. As questões não são questões oficiais de prova.
 - A fonte PDF não é redistribuída no repositório. Nenhuma alteração no esquema do IndexedDB; resultados continuam no backup existente.
+
+## Banco Nacional de Questões (importação local)
+
+O arquivo fornecido pelo usuário, *Banco Nacional de Questões — Versão 1.0* (Ministério dos Transportes/SENATRAN), contém 1.500 questões em quatro módulos, divididas em duas partes. Para evitar redistribuição inadvertida do PDF e permitir revisão editorial, o banco é convertido em JSON e importado pelo usuário na seção CNH: **Importar Banco Nacional de Questões (JSON)**. O JSON deve ter o campo `questions`, com `id`, `part`, `module`, `difficulty`, `question`, `correctAnswer`, `wrongAnswers` (três itens), `explanation` e `plateCode` opcional. O arquivo gerado a partir do PDF é disponibilizado separadamente ao usuário.
+
+A importação valida estrutura, IDs e tamanho, salva em `settings` sob a chave `cnhNationalBankV1` e acrescenta questões às já existentes. O histórico `records` e as configurações anteriores permanecem intactos; o banco também passa a integrar o backup JSON da agenda. Referências de placas são vinculadas aos desenhos esquemáticos do mosaico quando há correspondência. Os desenhos não são imagens oficiais e nem todas as questões possuem ilustração. O conteúdo original pode conter imprecisões e requer revisão individual antes de uso como fonte normativa.
