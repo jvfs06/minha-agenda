@@ -211,7 +211,7 @@ def register():
             return error("Não foi possível cadastrar esta conta", 409)
         raise
     token = issue_session(user_id)
-    return jsonify(id=user_id, email=email, access_token=token), 201
+    return set_session_cookie(make_response(jsonify(id=user_id, email=email, access_token=token), 201), token)
 
 @app.post("/api/auth/login")
 def login():
@@ -225,7 +225,8 @@ def login():
         user = db.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
     if not verify_password(password, user["password_hash"] if user is not None else hash_password("placeholder-dummy-password", bytes(16))):
         return error("Credenciais inválidas", 401)
-    return jsonify(id=user["id"], email=email, access_token=issue_session(user["id"]))
+    token = issue_session(user["id"])
+    return set_session_cookie(make_response(jsonify(id=user["id"], email=email, access_token=token)), token)
 
 @app.get("/api/auth/me")
 @require_user
