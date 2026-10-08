@@ -106,5 +106,20 @@ class APITest(unittest.TestCase):
         self.assertEqual(other.post("/api/auth/logout",json={},headers=h).status_code,200)
         self.assertEqual(other.get("/api/auth/me",headers=bearer).status_code,401)
 
+    def test_password_recovery_revokes_sessions_and_tokens(self):
+        from unittest.mock import patch
+        body={"email":"reset@example.com","password":"original-long-password"}
+        self.assertEqual(self.client.post("/api/auth/register",json=body,headers=self.headers).status_code,201)
+        token_holder=[]
+        with patch.object(self.api,"send_reset_email",side_effect=lambda email,token:token_holder.append(token)):
+            r=self.client.post("/api/auth/forgot-password",json={"email":body["email"]},headers=self.headers)
+        self.assertEqual(r.status_code,200)
+        self.assertEqual(len(token_holder),1)
+        r=self.client.post("/api/auth/reset-password",json={"token":token_holder[0],"password":"replacement-long-password"},headers=self.headers)
+        self.assertEqual(r.status_code,200)
+        self.assertEqual(self.client.get("/api/auth/me").status_code,401)
+        self.assertEqual(self.client.post("/api/auth/reset-password",json={"token":token_holder[0],"password":"replacement-long-password"},headers=self.headers).status_code,400)
+        self.assertEqual(self.client.post("/api/auth/login",json={"email":body["email"],"password":"replacement-long-password"},headers=self.headers).status_code,200)
+
 if __name__ == "__main__":
     unittest.main()
