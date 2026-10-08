@@ -62,3 +62,13 @@ Os dados continuam no banco IndexedDB **minha-agenda-v2** para preservar registr
 - Banco com 100 questões autorais em cinco temas; simulados de 30 perguntas; histórico de acertos por assunto, inclusive em simulados mistos.
 - Resultados continuam em registros `study` no IndexedDB, exportados no backup JSON existente.
 - Questões **não oficiais**, educativas e de revisão geral. Não substituem a legislação vigente, materiais do DETRAN ou questões reais do exame.
+
+## Versão 4.3 — CNH ilustrada (Pernambuco)
+
+- 50 questões **autorais** adicionais (total de 150), com seis ilustrações SVG didáticas originais e reutilizáveis, com texto alternativo. Não são imagens nem questões oficiais.
+- Links de referência temática para os Manuais Brasileiros de Sinalização de Trânsito da SENATRAN. Os links **não** comprovam validação individual de cada questão; revisão pedagógica e normativa ainda necessária.
+- Filtros: banco completo, somente ilustradas e revisão de questões erradas em simulados anteriores. Os erros são salvos no mesmo registro `study` em `cnhMistakeIds` e incluídos no backup existente.
+- Ilustrações e scripts incluídos no cache offline. Nenhuma migração ou exclusão de dados.
+- Para a prova em Pernambuco, conferir também as orientações atuais do DETRAN-PE. Nenhum item foi apresentado como questão oficial do DETRAN.
+
+Fonte temática: https://www.gov.br/transportes/pt-br/assuntos/transito/senatran/manuais-brasileiros-de-sinalizacao-de-transito
