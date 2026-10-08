@@ -246,8 +246,7 @@ def send_reset_email(recipient, token):
     msg = EmailMessage()
     msg["From"], msg["To"], msg["Subject"] = sender, recipient, "Minha Agenda — recuperação de senha"
     msg.set_content("Código de recuperação (válido por 15 minutos): " + token +
-                    "\
-Abra Minha Agenda e informe este código na área da conta.")
+                    "\nAbra Minha Agenda e informe este código na área da conta.")
     port = int(os.getenv("AGENDA_SMTP_PORT", "587"))
     with smtplib.SMTP(host, port, timeout=15) as smtp:
         smtp.starttls()
