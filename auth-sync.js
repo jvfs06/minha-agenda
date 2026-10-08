@@ -17,6 +17,7 @@
   section.append(card);
   const el=id=>document.getElementById(id);
   let snapshot=null;
+  let accessToken=null; // memory-only; sign in again after page reload
   const say=message=>{el("sync-status").textContent=message};
   function base(){
     const raw=el("sync-api").value.trim().replace(/\/$/,"");
@@ -26,7 +27,7 @@
     return url.origin+url.pathname.replace(/\/$/,"");
   }
   async function api(path,method="GET",body){
-    const response=await fetch(base()+path,{method,credentials:"include",headers:body===undefined?{}:{"Content-Type":"application/json"},body:body===undefined?undefined:JSON.stringify(body)});
+    const response=await fetch(base()+path,{method,credentials:"omit",headers:{...(body===undefined?{}:{"Content-Type":"application/json"}),...(accessToken?{"Authorization":"Bearer "+accessToken}:{})},body:body===undefined?undefined:JSON.stringify(body)});
     const data=await response.json().catch(()=>({}));
     if(!response.ok){const e=new Error(data.error||"Falha na requisição ("+response.status+")");e.status=response.status;throw e}
     return data;
@@ -34,6 +35,7 @@
   async function account(path){
     try{
       const data=await api(path,"POST",{email:el("sync-email").value,password:el("sync-password").value});
+      accessToken=data.access_token;
       el("sync-password").value="";
       el("sync-user").textContent="Conectado: "+data.email;
       say("Conta conectada. Os dados locais ainda não foram enviados.");
@@ -42,8 +44,9 @@
   el("sync-register").onclick=()=>account("/api/auth/register");
   el("sync-login").onclick=()=>account("/api/auth/login");
   el("sync-logout").onclick=async()=>{
-    try{await api("/api/auth/logout","POST",{});el("sync-user").textContent="Desconectado";say("Seus dados locais foram preservados.")}
+    try{if(accessToken)await api("/api/auth/logout","POST",{});el("sync-user").textContent="Desconectado";say("Seus dados locais foram preservados.")}
     catch(e){say(e.message)}
+    finally{accessToken=null}
     snapshot=null;el("sync-send").disabled=true;
   };
   async function localSnapshot(){
@@ -80,6 +83,7 @@
   el("sync-send").onclick=async()=>{
     if(!snapshot)return;
     const total=snapshot.records.length+snapshot.settings.length;
+    if(!accessToken){say("Entre novamente antes de enviar.");return}
     if(!window.confirm(`Enviar uma cópia de ${total} itens à conta conectada? Dados locais serão preservados. Itens remotos existentes NÃO serão sobrescritos.`))return;
     el("sync-send").disabled=true;
     let sent=0,existing=0,failed=0;
