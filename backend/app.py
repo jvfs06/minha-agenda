@@ -1,5 +1,7 @@
 """Minha Agenda API: authentication and opt-in revisioned sync foundation."""
 import hashlib
+from collections import defaultdict
+from threading import Lock
 import hmac
 import json
 import os
@@ -30,6 +32,10 @@ SECURE_COOKIES = os.getenv("AGENDA_SECURE_COOKIES", "1") == "1"
 COOKIE_NAME = "agenda_session"
 SESSION_SECONDS = 60 * 60 * 24 * 14
 MAX_ITEMS = 500
+RATE_WINDOW = 15 * 60
+RATE_LIMIT = 12
+_attempts = defaultdict(list)
+_attempt_lock = Lock()
 MAX_PAYLOAD = 64 * 1024
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 1024 * 1024
@@ -70,6 +76,7 @@ def connect():
     db = sqlite3.connect(DB_PATH, timeout=15)
     db.row_factory = sqlite3.Row
     db.execute("PRAGMA foreign_keys=ON")
+    db.execute("PRAGMA busy_timeout=15000")
     try:
         yield db
         db.commit()
@@ -161,6 +168,19 @@ def protect_mutations():
 def health():
     return jsonify(status="ok")
 
+def throttle_auth():
+    # Single-process fallback. Production needs a shared limiter (e.g. Redis).
+    ip = request.remote_addr or "unknown"
+    now = time.monotonic()
+    with _attempt_lock:
+        attempts = [t for t in _attempts[ip] if now - t < RATE_WINDOW]
+        if len(attempts) >= RATE_LIMIT:
+            _attempts[ip] = attempts
+            return True
+        attempts.append(now)
+        _attempts[ip] = attempts
+    return False
+
 def credentials():
     data = request.get_json(silent=True)
     if not isinstance(data, dict):
@@ -175,6 +195,8 @@ def credentials():
 
 @app.post("/api/auth/register")
 def register():
+    if throttle_auth():
+        return error("Muitas tentativas. Tente novamente mais tarde.", 429)
     creds = credentials()
     if not creds:
         return error("Informe e-mail válido e senha de 12 a 128 caracteres", 400)
@@ -192,13 +214,15 @@ def register():
 
 @app.post("/api/auth/login")
 def login():
+    if throttle_auth():
+        return error("Muitas tentativas. Tente novamente mais tarde.", 429)
     creds = credentials()
     if not creds:
         return error("Credenciais inválidas", 401)
     email, password = creds
     with connect() as db:
         user = db.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
-    if user is None or not verify_password(password, user["password_hash"]):
+    if not verify_password(password, user["password_hash"] if user is not None else hash_password("placeholder-dummy-password", bytes(16))):
         return error("Credenciais inválidas", 401)
     return set_session_cookie(make_response(jsonify(id=user["id"], email=email)), issue_session(user["id"]))
 
@@ -234,23 +258,27 @@ def push(collection, item_id):
     data = request.get_json(silent=True)
     if not isinstance(data, dict) or not isinstance(data.get("data"), dict) or not isinstance(data.get("base_revision"), int):
         return error("Envie data e base_revision", 400)
-    if data["base_revision"] < 0 or len(json.dumps(data["data"], ensure_ascii=False)) > MAX_PAYLOAD:
+    if isinstance(data["base_revision"], bool) or data["base_revision"] < 0 or len(json.dumps(data["data"], ensure_ascii=False)) > MAX_PAYLOAD:
         return error("Conteúdo inválido ou muito grande", 400)
     expected_key = "id" if collection == "records" else "key"
     if data["data"].get(expected_key) != item_id:
         return error("ID do conteúdo não corresponde ao item", 400)
     now = datetime.now(timezone.utc).isoformat()
     with connect() as db:
+        if not DATABASE_URL:
+            db.execute("BEGIN IMMEDIATE")
         lock = " FOR UPDATE" if DATABASE_URL else ""
         current = db.execute("SELECT revision,payload FROM items WHERE user_id=? AND collection=? AND item_id=?" + lock, (g.user_id, collection, item_id)).fetchone()
         revision = current["revision"] if current else 0
         if data["base_revision"] != revision:
             return jsonify(error="Conflito de revisão", current=dict(revision=revision, data=json.loads(current["payload"])) if current else None), 409
         new_revision = revision + 1
-        db.execute("""INSERT INTO items(user_id,collection,item_id,payload,revision,updated_at)
+        result = db.execute("""INSERT INTO items(user_id,collection,item_id,payload,revision,updated_at)
                       VALUES(?,?,?,?,?,?) ON CONFLICT(user_id,collection,item_id)
-                      DO UPDATE SET payload=excluded.payload,revision=excluded.revision,updated_at=excluded.updated_at""",
-                   (g.user_id, collection, item_id, json.dumps(data["data"], ensure_ascii=False), new_revision, now))
+                      DO UPDATE SET payload=excluded.payload,revision=excluded.revision,updated_at=excluded.updated_at WHERE items.revision=?""",
+                   (g.user_id, collection, item_id, json.dumps(data["data"], ensure_ascii=False), new_revision, now, revision))
+        if result.rowcount != 1:
+            return error("Conflito de revisão", 409)
     return jsonify(id=item_id, revision=new_revision, updated_at=now)
 
 init_db()
