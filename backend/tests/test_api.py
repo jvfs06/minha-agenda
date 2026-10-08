@@ -12,7 +12,6 @@ class APITest(unittest.TestCase):
         import app
         self.api = importlib.reload(app)
         self.api.init_db()
-        self.api._attempts.clear()
         self.client = self.api.app.test_client()
         self.headers = {"Origin": "http://localhost:8000"}
 
