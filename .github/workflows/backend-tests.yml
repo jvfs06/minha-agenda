@@ -21,3 +21,33 @@ jobs:
           python-version: '3.12'
       - run: python -m pip install -r requirements.txt
       - run: python -m unittest discover -s tests -v
+  postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: agenda
+          POSTGRES_PASSWORD: agenda_test
+          POSTGRES_DB: agenda_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U agenda -d agenda_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      DATABASE_URL: postgresql://agenda:agenda_test@localhost:5432/agenda_test
+      AGENDA_ALLOWED_ORIGINS: http://localhost:8000
+      AGENDA_SECURE_COOKIES: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r requirements.txt
+      - run: python -m unittest integration_postgres -v
