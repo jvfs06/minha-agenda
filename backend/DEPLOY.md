@@ -38,3 +38,9 @@ O `render.yaml` descreve um serviço web Flask/Gunicorn e um PostgreSQL gerencia
 - [ ] Revisar limites de armazenamento e paginação de sincronização; não há exclusão/tombstones nem download automático para IndexedDB.
 - [ ] Validar UX mobile e acessibilidade da tela de conta.
 - [ ] **Não publicar o frontend de login antes de uma API operacional e validada.**
+
+## Solução adotada para cookies de terceiros
+
+A interface experimental usa `Authorization: Bearer` e `credentials: "omit"`. O token aleatório é guardado **somente em memória JavaScript**; ao recarregar a página é necessário entrar novamente. Não use `localStorage` nem IndexedDB para armazenar o token sem revisão de segurança. O backend mantém cookies HttpOnly como compatibilidade, mas a interface não depende deles. Como a API aceita `Authorization`, o preflight CORS precisa permitir esse cabeçalho e origens restritas. Os tokens devem ser protegidos contra XSS; o frontend não pode injetar HTML não confiável. Para produção, adotar sessões de curta duração, rotação/renovação e revogação adequada.
+
+**Ainda não liberar produção:** rate limiter atual é por processo (não compartilhado entre workers); faltam recuperação de senha e verificação de e-mail. Esses itens precisam de infraestrutura externa e validação antes de criar contas reais.
