@@ -22,3 +22,5 @@ test('Mosaic bank: 32 valid grounded questions and 16 plates',()=>{const source=
 test('Mosaic questions load before quiz and cache offline',()=>{const html=read('index.html'),sw=read('service-worker.js');assert.ok(html.indexOf('cnh-mosaic.js')<html.indexOf('v3.js'));assert.ok(sw.includes('./cnh-mosaic.js'));assert.ok(read('v3.js').includes('window.CNH_MOSAIC_BANK'))});
 
 test('National bank JSON import preserves existing records and uses stable question ids',()=>{const source=read('v3.js');assert.ok(source.includes("key:'cnhNationalBankV1'"));assert.ok(source.includes("questionBank=[...national,...baseQuestionBank]"));assert.ok(source.includes('validateNationalBank'));assert.ok(source.includes('matchedPlate?.image'));assert.ok(!source.includes("clear('records')"))});
+
+test('Extras remains hidden until its navigation tab is active',()=>{const css=read('v3.css');assert.ok(css.includes('#extras.page{display:none}'));assert.ok(css.includes('#extras.page.active{display:grid'))});
