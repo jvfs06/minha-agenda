@@ -1,4 +1,4 @@
-# Minha Agenda 2.0 — PWA
+# Minha Agenda 3.0 — PWA
 
 ## Publicar no GitHub Pages
 
@@ -23,3 +23,11 @@ A versão 2 usa um banco IndexedDB novo. Marcações da versão anterior que est
 ## Treinos
 
 Os exercícios seguem o plano de treino fornecido. Priorize técnica, descanso e atenção a desconforto no punho. Os horários são estimativas: se a sessão ultrapassar 30 min, não sacrifique a segurança.
+
+## Novidades da versão 3
+
+Na aba **Extras 3.0**: medidas físicas, cronômetro de descanso, calendário de consistência, flashcards de inglês, simulado demonstrativo da CNH, Pomodoro, tarefas da faculdade e tema claro/escuro.
+
+Os dados continuam no banco IndexedDB **minha-agenda-v2** para preservar registros existentes. O backup exportado agora usa a versão 3, e a importação aceita backups 2 e 3. Os flashcards usam intervalos simples de 1, 3 ou 7 dias. As perguntas da CNH são exemplos didáticos, não um banco oficial. Cronômetros dependem de manter o aplicativo ativo; não há notificações em segundo plano.
+
+**Antes de atualizar:** exporte seu backup JSON na aba Dados. Após atualizar, teste a importação e exportação. A aplicação não sincroniza dispositivos.
