@@ -49,3 +49,10 @@ Os dados continuam no banco IndexedDB **minha-agenda-v2** para preservar registr
 - Testes estáticos com `node --test tests/smoke.test.mjs`, executados automaticamente pelo GitHub Actions.
 
 **Antes de publicar:** exporte o backup JSON. Valide manualmente as telas no celular, a importação/exportação, os temas e o uso offline. Os testes de fumaça não substituem testes completos de navegador.
+
+## Versão 4.2 — banco CNH
+
+- 35 questões educativas autorais em cinco temas, sorteio sem repetição no mesmo simulado, escolha de tema e de 5/10/20/35 perguntas (limitado ao tema).
+- Feedback imediato com resposta correta e revisão dos erros; pontuação salva como estudo CNH no mesmo IndexedDB e backup existente.
+- Conteúdo de prática **não oficial**, sem garantia de refletir a prova ou todas as atualizações normativas do DETRAN. Conferir fontes oficiais antes de estudar para a prova.
+- Nenhuma alteração na versão do banco IndexedDB ou no formato do backup.
