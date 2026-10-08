@@ -1,4 +1,4 @@
-# Minha Agenda 4.0 — PWA
+# Minha Agenda 4.1 — PWA
 
 ## Publicar no GitHub Pages
 
@@ -39,3 +39,13 @@ Os dados continuam no banco IndexedDB **minha-agenda-v2** para preservar registr
 - Importação/exportação JSON continuam com compatibilidade v2/v3 (formato de backup 3).
 - Cache offline atualizado para incluir `v4.css` e `v4.js`.
 - **Validação necessária antes do merge:** testar em celular e desktop, temas, navegação, treinos, estudos, ferramentas, backup JSON e uso offline. Exporte um backup antes de atualizar.
+
+## Versão 4.1 — relatórios, calendário e qualidade
+
+- Gráficos locais dos últimos 7 dias: exercícios registrados e minutos estudados.
+- Dashboard configurável: treinos, estudo acumulado, último peso e prazos futuros; preferência salva em IndexedDB.
+- Calendário mensal com compromissos próprios e prazos das tarefas da faculdade. Toque no dia para preencher a data do compromisso.
+- Compromissos usam o novo tipo de registro `event`, incluído no backup JSON versão 3. O banco existente `minha-agenda-v2` permanece inalterado.
+- Testes estáticos com `node --test tests/smoke.test.mjs`, executados automaticamente pelo GitHub Actions.
+
+**Antes de publicar:** exporte o backup JSON. Valide manualmente as telas no celular, a importação/exportação, os temas e o uso offline. Os testes de fumaça não substituem testes completos de navegador.
