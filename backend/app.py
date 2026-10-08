@@ -211,6 +211,7 @@ def push(collection, item_id):
                    (g.user_id, collection, item_id, json.dumps(data["data"], ensure_ascii=False), new_revision, now))
     return jsonify(id=item_id, revision=new_revision, updated_at=now)
 
+init_db()
+
 if __name__ == "__main__":
-    init_db()
     app.run(host="127.0.0.1", port=5000, debug=False)
