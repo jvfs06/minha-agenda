@@ -20,8 +20,8 @@ O `render.yaml` descreve um serviço web Flask/Gunicorn e um PostgreSQL gerencia
 
 ## Limitações conhecidas
 
-- Fluxo de sessão entre domínios depende de política de cookies do navegador.
-- Ainda faltam recuperação/verificação de e-mail, proteção robusta contra brute-force e testes integrados em PostgreSQL.
+- A interface experimental usa Bearer em memória; não depende de cookies de terceiros.
+- Recuperação de senha exige SMTP real; verificação de e-mail ainda não foi implementada. Rate limiting usa banco compartilhado, mas requer revisão de abuso distribuído.
 - O controle de revisão retorna 409 em conflito, mas a primeira gravação simultânea do mesmo ID precisa de teste de concorrência e tratamento de violação de chave única.
 - A interface só envia cópias manualmente e não baixa dados da nuvem para IndexedDB.
 - O frontend ainda exige informar manualmente a URL da API.
@@ -30,8 +30,8 @@ O `render.yaml` descreve um serviço web Flask/Gunicorn e um PostgreSQL gerencia
 
 - [ ] GitHub Actions verde em **unit**, **postgres** e **PWA checks** no último commit.
 - [ ] Validar os cookies de sessão em Android Chrome com frontend em github.io e API em domínio externo; se bloqueados, projetar autenticação compatível antes de lançar.
-- [ ] Trocar o rate limiter em memória por armazenamento compartilhado (Redis ou solução gerenciada), com políticas para login e cadastro e logs seguros.
-- [ ] Adicionar recuperação e verificação de e-mail, fluxo de redefinição de senha e revogação de sessões.
+- [x] Rate limiter compartilhado no banco; ainda avaliar proxy, IP real e mitigação de abuso distribuído.
+- [x] Recuperação e revogação de sessões implementadas; [ ] configurar SMTP e verificação de e-mail.
 - [ ] Testar concorrência de escrita de mesmo ID no PostgreSQL, inclusive inserção simultânea.
 - [ ] Criar teste E2E de migração, retorno offline, duplicações, conflito, dados de configurações e exportação/recuperação de backup.
 - [ ] Revisar implantação HTTPS, CORS, proxy e cookies; ativar backups automáticos do banco com teste de restauração.
@@ -43,4 +43,4 @@ O `render.yaml` descreve um serviço web Flask/Gunicorn e um PostgreSQL gerencia
 
 A interface experimental usa `Authorization: Bearer` e `credentials: "omit"`. O token aleatório é guardado **somente em memória JavaScript**; ao recarregar a página é necessário entrar novamente. Não use `localStorage` nem IndexedDB para armazenar o token sem revisão de segurança. O backend mantém cookies HttpOnly como compatibilidade, mas a interface não depende deles. Como a API aceita `Authorization`, o preflight CORS precisa permitir esse cabeçalho e origens restritas. Os tokens devem ser protegidos contra XSS; o frontend não pode injetar HTML não confiável. Para produção, adotar sessões de curta duração, rotação/renovação e revogação adequada.
 
-**Ainda não liberar produção:** rate limiter atual é por processo (não compartilhado entre workers); faltam recuperação de senha e verificação de e-mail. Esses itens precisam de infraestrutura externa e validação antes de criar contas reais.
+**Ainda não liberar produção:** rate limiter já usa banco compartilhado; recuperação de senha exige SMTP e ainda falta verificação de e-mail. Esses itens precisam de infraestrutura externa e validação antes de criar contas reais.
