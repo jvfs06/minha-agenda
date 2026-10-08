@@ -1,4 +1,4 @@
-# Minha Agenda 3.0 — PWA
+# Minha Agenda 4.0 — PWA
 
 ## Publicar no GitHub Pages
 
@@ -31,3 +31,11 @@ Na aba **Extras 3.0**: medidas físicas, cronômetro de descanso, calendário de
 Os dados continuam no banco IndexedDB **minha-agenda-v2** para preservar registros existentes. O backup exportado agora usa a versão 3, e a importação aceita backups 2 e 3. Os flashcards usam intervalos simples de 1, 3 ou 7 dias. As perguntas da CNH são exemplos didáticos, não um banco oficial. Cronômetros dependem de manter o aplicativo ativo; não há notificações em segundo plano.
 
 **Antes de atualizar:** exporte seu backup JSON na aba Dados. Após atualizar, teste a importação e exportação. A aplicação não sincroniza dispositivos.
+
+## Versão 4.0 — redesign mobile-first
+
+- Navegação inferior em telas pequenas, cartões renovados, atalhos no dashboard, tipografia e cores consistentes.
+- Mantém todas as páginas, formulários, ferramentas 3.0 e a estrutura IndexedDB `minha-agenda-v2` sem migração de dados.
+- Importação/exportação JSON continuam com compatibilidade v2/v3 (formato de backup 3).
+- Cache offline atualizado para incluir `v4.css` e `v4.js`.
+- **Validação necessária antes do merge:** testar em celular e desktop, temas, navegação, treinos, estudos, ferramentas, backup JSON e uso offline. Exporte um backup antes de atualizar.
