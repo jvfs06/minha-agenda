@@ -25,3 +25,16 @@ O `render.yaml` descreve um serviço web Flask/Gunicorn e um PostgreSQL gerencia
 - O controle de revisão retorna 409 em conflito, mas a primeira gravação simultânea do mesmo ID precisa de teste de concorrência e tratamento de violação de chave única.
 - A interface só envia cópias manualmente e não baixa dados da nuvem para IndexedDB.
 - O frontend ainda exige informar manualmente a URL da API.
+
+## Checklist obrigatório antes do merge e do uso real
+
+- [ ] GitHub Actions verde em **unit**, **postgres** e **PWA checks** no último commit.
+- [ ] Validar os cookies de sessão em Android Chrome com frontend em github.io e API em domínio externo; se bloqueados, projetar autenticação compatível antes de lançar.
+- [ ] Trocar o rate limiter em memória por armazenamento compartilhado (Redis ou solução gerenciada), com políticas para login e cadastro e logs seguros.
+- [ ] Adicionar recuperação e verificação de e-mail, fluxo de redefinição de senha e revogação de sessões.
+- [ ] Testar concorrência de escrita de mesmo ID no PostgreSQL, inclusive inserção simultânea.
+- [ ] Criar teste E2E de migração, retorno offline, duplicações, conflito, dados de configurações e exportação/recuperação de backup.
+- [ ] Revisar implantação HTTPS, CORS, proxy e cookies; ativar backups automáticos do banco com teste de restauração.
+- [ ] Revisar limites de armazenamento e paginação de sincronização; não há exclusão/tombstones nem download automático para IndexedDB.
+- [ ] Validar UX mobile e acessibilidade da tela de conta.
+- [ ] **Não publicar o frontend de login antes de uma API operacional e validada.**
