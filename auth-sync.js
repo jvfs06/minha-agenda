@@ -11,7 +11,7 @@
     <label>E-mail <input id="sync-email" type="email" autocomplete="email"></label>
     <label>Senha <input id="sync-password" type="password" autocomplete="current-password" minlength="12"></label>
     <div class="actions"><button type="button" id="sync-register">Criar conta</button><button type="button" id="sync-login">Entrar</button><button type="button" id="sync-logout">Sair</button></div>
-    <p id="sync-user" role="status"></p>
+    <p id="sync-user" role="status"></p>\n    <details><summary>Recuperar senha</summary><p>Enviaremos um código ao e-mail informado acima.</p><button type="button" id="sync-forgot">Solicitar código</button><label>Código recebido por e-mail <input id="sync-reset-code" autocomplete="off"></label><label>Nova senha (mínimo 12 caracteres) <input id="sync-new-password" type="password" minlength="12" autocomplete="new-password"></label><button type="button" id="sync-reset">Redefinir senha</button></details>
     <div class="actions"><button type="button" id="sync-preview">Pré-visualizar envio</button><button type="button" id="sync-send" disabled>Enviar cópia para minha conta</button></div>
     <p id="sync-status" role="status"></p>`;
   section.append(card);
@@ -41,6 +41,14 @@
       say("Conta conectada. Os dados locais ainda não foram enviados.");
     }catch(e){say(e.message)}
   }
+  el("sync-forgot").onclick=async()=>{
+    try{const r=await api("/api/auth/forgot-password","POST",{email:el("sync-email").value});say(r.message)}
+    catch(e){say(e.message)}
+  };
+  el("sync-reset").onclick=async()=>{
+    try{await api("/api/auth/reset-password","POST",{token:el("sync-reset-code").value.trim(),password:el("sync-new-password").value});accessToken=null;el("sync-reset-code").value="";el("sync-new-password").value="";say("Senha alterada. Entre novamente.");}
+    catch(e){say(e.message)}
+  };
   el("sync-register").onclick=()=>account("/api/auth/register");
   el("sync-login").onclick=()=>account("/api/auth/login");
   el("sync-logout").onclick=async()=>{
