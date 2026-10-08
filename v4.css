@@ -15,3 +15,5 @@ main>.page img,main>.page svg,main>.page canvas{max-width:100%;height:auto}
  main>.page.active{display:block;min-height:160px}
  .v41-charts,.v41-summary,.stats{min-width:0}
 }
+
+.mobile-extra-links{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}.mobile-extra-links button{flex:1;min-width:130px}@media(min-width:701px){.mobile-extra-links{display:none}}
