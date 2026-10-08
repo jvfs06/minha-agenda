@@ -16,6 +16,14 @@ from pathlib import Path
 from flask import Flask, g, jsonify, request, make_response
 from flask_cors import CORS
 
+try:
+    import psycopg
+    from psycopg.rows import dict_row
+except ImportError:
+    psycopg = None
+    dict_row = None
+
+DATABASE_URL = os.getenv("DATABASE_URL", "")
 DB_PATH = os.getenv("AGENDA_DATABASE", str(Path(__file__).with_name("agenda.sqlite3")))
 ORIGINS = [x.strip() for x in os.getenv("AGENDA_ALLOWED_ORIGINS", "http://localhost:8000").split(",") if x.strip()]
 SECURE_COOKIES = os.getenv("AGENDA_SECURE_COOKIES", "1") == "1"
@@ -27,8 +35,38 @@ app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 1024 * 1024
 CORS(app, origins=ORIGINS, supports_credentials=True)
 
+class PostgresAdapter:
+    def __init__(self, conn):
+        self.conn = conn
+    def execute(self, sql, params=()):
+        return self.conn.execute(sql.replace("?", "%s"), params)
+    def executescript(self, sql):
+        for statement in sql.split(";"):
+            if statement.strip():
+                self.execute(statement)
+    def commit(self):
+        self.conn.commit()
+    def rollback(self):
+        self.conn.rollback()
+    def close(self):
+        self.conn.close()
+
 @contextmanager
 def connect():
+    if DATABASE_URL:
+        if psycopg is None:
+            raise RuntimeError("Instale psycopg para usar DATABASE_URL")
+        db = PostgresAdapter(psycopg.connect(DATABASE_URL, row_factory=dict_row))
+        try:
+            yield db
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
+        finally:
+            db.close()
+        return
+
     db = sqlite3.connect(DB_PATH, timeout=15)
     db.row_factory = sqlite3.Row
     db.execute("PRAGMA foreign_keys=ON")
@@ -42,7 +80,8 @@ def connect():
         db.close()
 
 def init_db():
-    Path(DB_PATH).parent.mkdir(parents=True, exist_ok=True)
+    if not DATABASE_URL:
+        Path(DB_PATH).parent.mkdir(parents=True, exist_ok=True)
     with connect() as db:
         db.executescript("""
         CREATE TABLE IF NOT EXISTS users(
@@ -144,8 +183,10 @@ def register():
     try:
         with connect() as db:
             db.execute("INSERT INTO users VALUES(?,?,?,?)", (user_id, email, hash_password(password), datetime.now(timezone.utc).isoformat()))
-    except sqlite3.IntegrityError:
-        return error("Não foi possível cadastrar esta conta", 409)
+    except Exception as exc:
+        if isinstance(exc, sqlite3.IntegrityError) or (psycopg and isinstance(exc, psycopg.errors.UniqueViolation)):
+            return error("Não foi possível cadastrar esta conta", 409)
+        raise
     token = issue_session(user_id)
     return set_session_cookie(make_response(jsonify(id=user_id, email=email), 201), token)
 
@@ -200,7 +241,8 @@ def push(collection, item_id):
         return error("ID do conteúdo não corresponde ao item", 400)
     now = datetime.now(timezone.utc).isoformat()
     with connect() as db:
-        current = db.execute("SELECT revision,payload FROM items WHERE user_id=? AND collection=? AND item_id=?", (g.user_id, collection, item_id)).fetchone()
+        lock = " FOR UPDATE" if DATABASE_URL else ""
+        current = db.execute("SELECT revision,payload FROM items WHERE user_id=? AND collection=? AND item_id=?" + lock, (g.user_id, collection, item_id)).fetchone()
         revision = current["revision"] if current else 0
         if data["base_revision"] != revision:
             return jsonify(error="Conflito de revisão", current=dict(revision=revision, data=json.loads(current["payload"])) if current else None), 409
