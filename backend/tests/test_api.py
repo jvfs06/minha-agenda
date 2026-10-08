@@ -12,6 +12,7 @@ class APITest(unittest.TestCase):
         import app
         self.api = importlib.reload(app)
         self.api.init_db()
+        self.api._attempts.clear()
         self.client = self.api.app.test_client()
         self.headers = {"Origin": "http://localhost:8000"}
 
@@ -73,6 +74,23 @@ class APITest(unittest.TestCase):
         self.assertEqual(self.client.put(url, json={"base_revision":0,"data":{"id":"wrong"}}, headers=self.headers).status_code, 400)
         self.assertEqual(self.client.put(url, json={"base_revision":-1,"data":{"id":"entry-1"}}, headers=self.headers).status_code, 400)
         self.assertEqual(self.client.get("/api/sync/not-real").status_code, 404)
+
+    def test_rate_limit_and_revision_type(self):
+        self.client.post("/api/auth/register", json={"email":"rate@example.com","password":"long-test-password"}, headers=self.headers)
+        url = "/api/sync/records/entry-1"
+        self.assertEqual(self.client.put(url, json={"base_revision":True,"data":{"id":"entry-1"}}, headers=self.headers).status_code, 400)
+        results = [self.client.post("/api/auth/login", json={"email":"absent@example.com","password":"long-test-password"}, headers=self.headers).status_code for _ in range(self.api.RATE_LIMIT)]
+        self.assertIn(429, results)
+        self.assertEqual(self.client.post("/api/auth/login", json={"email":"absent@example.com","password":"long-test-password"}, headers=self.headers).status_code, 429)
+
+    def test_duplicate_email_and_sync_settings(self):
+        body={"email":"duplicate@example.com","password":"long-test-password"}
+        self.assertEqual(self.client.post("/api/auth/register", json=body, headers=self.headers).status_code, 201)
+        self.assertEqual(self.client.post("/api/auth/register", json=body, headers=self.headers).status_code, 409)
+        url="/api/sync/settings/goals"
+        self.assertEqual(self.client.put(url,json={"base_revision":0,"data":{"key":"goals","value":{"workouts":5}}},headers=self.headers).json["revision"],1)
+        self.assertEqual(self.client.put(url,json={"base_revision":1,"data":{"key":"goals","value":{"workouts":4}}},headers=self.headers).json["revision"],2)
+        self.assertEqual(self.client.get("/api/sync/settings").json["items"][0]["data"]["value"]["workouts"],4)
 
 if __name__ == "__main__":
     unittest.main()
