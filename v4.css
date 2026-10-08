@@ -17,3 +17,9 @@ main>.page img,main>.page svg,main>.page canvas{max-width:100%;height:auto}
 }
 
 .mobile-extra-links{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}.mobile-extra-links button{flex:1;min-width:130px}@media(min-width:701px){.mobile-extra-links{display:none}}
+
+/* Fix: global `nav { top:0 }` stretched the fixed mobile bar from top to bottom. */
+@media(max-width:700px){
+  nav.bottom-nav{top:auto;bottom:0;height:auto;min-height:0;align-items:center;align-content:center}
+  nav.bottom-nav button{align-self:center}
+}
